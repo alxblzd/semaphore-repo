@@ -16,13 +16,13 @@
         
    - name: "check or change /home/{{ username }}"
       file:
-        path: /home/{{ username }}
+        path: "/home/{{ username }}"
         state: touch
         mode: '700'
         
     - name: "check or change /home/{{ username }}/.ssh/authorized_keys"
       file:
-        path: /home/{{ username }}/.ssh/authorized_keys
+        path: "/home/{{ username }}/.ssh/authorized_keys"
         state: touch
         mode: '644'
 
