@@ -1,0 +1,23 @@
+---
+- name: Create New User
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Create User
+      ansible.builtin.user:
+        name: "{{ username }}"
+        state: present
+        shell: /bin/bash
+        password: "{{ userpass | password_hash('sha512') }}"
+        update_password: on_create
+        groups: "{{ super_group }}"
+        append: yes
+
+    - name: Set authorized key
+      ansible.posix.authorized_key:
+        user: "{{ username }}"
+        state: present
+        key: "{{ item }}"
+      loop:
+        - "{{ key }}"
