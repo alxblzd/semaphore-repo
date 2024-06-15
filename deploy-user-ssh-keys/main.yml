@@ -1,18 +1,17 @@
 ---
 - hosts: all
-  
   become: true
   gather_facts: false
   tasks:
-    - name: Install required packaged
+    - name: Install required packages
       apt:
         name: "{{ item }}"
         state: present
         update_cache: yes
-      with_items:
+      loop:
         - acl
         - python3-pip
-        
+
     - name: Create User
       ansible.builtin.user:
         name: "{{ username }}"
@@ -20,27 +19,20 @@
         shell: /bin/bash
         password: "{{ userpass | password_hash('sha512') }}"
         update_password: on_create
-      #  groups: "{{ super_group }}"
         append: yes
 
     - name: Set authorized key
       ansible.posix.authorized_key:
         user: "{{ username }}"
         state: present
-        key: "{{ item }}"
-      loop:
-        - "{{ key }}"
+        key: "{{ key }}"
 
-    - name: Creating a file with content
-      copy:
+    - name: Add user to sudoers with no password requirement
+      lineinfile:
         dest: "/etc/sudoers.d/{{ username }}"
-        content: |
-          {{ username }} ALL=(ALL) NOPASSWD: ALL
-
-        
-    - name: Create a new file with permissions
-      file:
-        path: "/etc/sudoers.d/{{ username }}"
-        state: touch
-        mode: 0440
+        state: present
+        create: yes
+        line: "{{ username }} ALL=(ALL) NOPASSWD: ALL"
+        mode: '0440'
         owner: root
+        group: root
