@@ -28,3 +28,17 @@
         key: "{{ item }}"
       loop:
         - "{{ key }}"
+
+    - name: Creating a file with content
+      copy:
+        dest: "/etc/sudoers.d/{{ username }}"
+        content: |
+          {{ username }} ALL=(ALL) NOPASSWD: ALL
+
+        
+    - name: Create a new file with permissions
+      file:
+        path: "/etc/sudoers.d/{{ username }}"
+        state: touch
+        mode: 0440
+        owner: root
