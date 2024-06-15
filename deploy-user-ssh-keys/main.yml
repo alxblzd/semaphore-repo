@@ -1,6 +1,6 @@
 ---
-- name: Create New User
-  hosts: all
+- hosts: all
+  
   become: true
   gather_facts: false
   tasks:
