@@ -13,6 +13,18 @@
         update_password: on_create
       #  groups: "{{ super_group }}"
         append: yes
+        
+   - name: "check or change /home/{{ username}}"
+      file:
+        path: /home/{{ username }}
+        state: touch
+        mode: '700'
+        
+    - name: "check or change /home/{{ user.path }}/.ssh/authorized_keys"
+      file:
+        path: /home/{{ username }}/.ssh/authorized_keys
+        state: touch
+        mode: '644'
 
     - name: Set authorized key
       ansible.posix.authorized_key:
