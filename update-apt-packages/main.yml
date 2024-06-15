@@ -3,7 +3,11 @@
 
   become: true
   tasks:
-    - name: update apt packages
+    - name: Mise à jour de la cache APT
       apt:
-        upgrade: yes
         update_cache: yes
+        cache_valid_time: 3600  # durée en secondes pendant laquelle la cache est considérée comme valide
+
+    - name: Mise à niveau des paquets APT
+      apt:
+        upgrade: dist  # ou 'full', 'yes' pourrait être obsolète
