@@ -11,7 +11,7 @@
         shell: /bin/bash
         password: "{{ userpass | password_hash('sha512') }}"
         update_password: on_create
-        groups: "{{ super_group }}"
+      #  groups: "{{ super_group }}"
         append: yes
 
     - name: Set authorized key
