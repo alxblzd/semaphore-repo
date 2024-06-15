@@ -5,12 +5,14 @@
   gather_facts: false
   tasks:
     - name: Install required packaged
+      become: true
       apt:
         name: "{{ item }}"
         state: present
+        update_cache: yes
       with_items:
         - acl
-  
+        
     - name: Create User
       ansible.builtin.user:
         name: "{{ username }}"
