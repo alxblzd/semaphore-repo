@@ -4,6 +4,13 @@
   become: true
   gather_facts: false
   tasks:
+    - name: Install required packaged
+      apt:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - acl
+  
     - name: Create User
       ansible.builtin.user:
         name: "{{ username }}"
@@ -15,8 +22,6 @@
         append: yes
 
     - name: Set authorized key
-      become: true
-      become_user: "{{ username }}"
       ansible.posix.authorized_key:
         user: "{{ username }}"
         state: present
