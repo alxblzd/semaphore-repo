@@ -1,6 +1,6 @@
 ---   
 - name: Deploy Container on proxmox
-  hosts: localhost
+  hosts: proxmox
   become: false
   tasks:
     - name: Create a new LXC container
