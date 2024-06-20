@@ -3,6 +3,13 @@
   hosts: proxmox
   become: false
   tasks:
+    - name: Install pip
+      ansible.builtin.package:
+        name:
+          - python3-pip
+          - python3-proxmoxer
+        state: present
+        
     - name: Create a new LXC container
       community.general.proxmox:
         api_host: "{{ proxmox_host }}"
