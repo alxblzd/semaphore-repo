@@ -1,0 +1,134 @@
+---
+- name: Playbook to create LV, Filesystem and Mount it
+  hosts: nodes
+  remote_user: <not_redacted>
+  become: yes
+  become_method: sudo
+  vars:
+    vg_name: node-vg
+    vg_name2: node--vg
+    lv_name: data0
+    lv_size: 250g
+    fs_type: ext4
+    mount_path: /mnt/node
+    disk_name: /dev/sda
+  tasks:
+    - name: Install parted
+      package:
+        name: parted
+        state: present
+
+    - name: Partition /dev/sdd disk
+      community.general.parted:
+        device: '{{ disk_name }}'
+        number: 1
+        flags: [ lvm ]
+        state: present
+        part_end: "100%"
+
+    - name: Task for PV and VG
+      community.general.lvg:
+        vg: "{{ vg_name }}"
+        pvs: '{{ disk_name }}1'
+
+    - name: Create Logical Volume for data persistence
+      community.general.lvol:
+        vg: "{{ vg_name }}"
+        lv: "{{ lv_name }}"
+        size: "{{ lv_size }}"
+
+    - name: Create filesystem on LV
+      community.general.filesystem:
+        fstype: "{{ fs_type }}"
+        dev: /dev/mapper/{{ vg_name2 }}-{{ lv_name }}
+
+    - name: Get LV UUID
+      ansible.builtin.command: lsblk /dev/mapper/{{ vg_name2 }}-{{ lv_name }} -no UUID
+      register: lv_uuid
+
+    - name: Mount created filesystem
+      ansible.posix.mount:
+        path: "{{ mount_path }}"
+        src: UUID={{ lv_uuid.stdout }}
+        state: mounted
+        fstype: "{{ fs_type }}"
+
+    - name: Create monerod user
+      user:
+        name: monerod
+        state: present
+        create_home: yes
+
+    - name: Ensure permissions on /mnt/node directory
+      file:
+        path: /mnt/node
+        state: directory
+        owner: monerod
+        group: monerod
+
+    - name: Creating a new directory for monero
+      file:
+        path: /mnt/node/monero
+        state: directory
+        owner: monerod
+        group: monerod
+
+    - name: Creating monero config file
+      file:
+        path: /mnt/node/monerod.conf
+        owner: monerod
+        group: monerod
+        state: touch
+
+    - name: Copy monero node configuration file from template
+      template:
+        src: monero.conf.j2
+        dest: /mnt/node/monerod.conf
+
+    - name: Creating monero service config file
+      file:
+        path: /etc/systemd/system/monerod.service
+        owner: monerod
+        group: monerod
+        state: touch
+
+    - name: Copy monero service configuration file from template
+      template:
+        src: monerod.service.j2
+        dest: /etc/systemd/system/monerod.service
+
+    - name: Download latest 64-bit binaries
+      get_url:
+        url: https://downloads.getmonero.org/cli/linux64
+        dest: /tmp/monero-linux-x64.tar.bz2
+
+    - name: Unarchive
+      unarchive:
+        remote_src: yes
+        src: /tmp/monero-linux-x64.tar.bz2
+        dest: /mnt/node/monero/
+        owner: monerod
+
+    - name: Find monero directory
+      find:
+        paths: /mnt/node/monero/
+        patterns: 'monero-x86_64-linux-gnu-*'
+        file_type: directory
+      register: monero_dir
+
+    - name: Copying monerod
+      copy:
+        remote_src: yes
+        src: "{{ item.path }}/monerod"
+        dest: /usr/local/bin/monerod
+        owner: monerod
+        group: monerod
+        mode: '0755'
+      with_items: "{{ monero_dir.files }}"
+
+    - name: Load the new systemd script for monerod and start the monerod service
+      systemd:
+        state: restarted
+        enabled: yes
+        daemon_reload: yes
+        name: monerod
