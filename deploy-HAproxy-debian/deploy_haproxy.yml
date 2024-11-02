@@ -1,0 +1,12 @@
+---
+- name: Install HAProxy
+  hosts: all
+  become: true
+
+  vars:
+    backend_server: "192.168.1.10"
+    backend_port: "80"
+
+
+  roles:
+    - haproxy

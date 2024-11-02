@@ -1,0 +1,58 @@
+---
+- name: Install required packages for HAProxy repository
+  apt:
+    name: gnupg2
+    state: present
+
+- name: One way to avoid apt_ky
+  block:
+    - name: somerepo | no apt key
+      ansible.builtin.get_url:
+        url: https://haproxy.debian.net/bernat.debian.org.gpg
+        dest: /usr/share/keyrings/haproxy.asc
+        checksum: sha256:586e7ff5f3d804bf9975c2f634cf0bf35f22af9e1b2476e6f91f7c8146010a6c
+
+    - name: Add HAProxy APT repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/haproxy.asc] http://haproxy.debian.net bookworm-backports-3.0 main"
+        state: present
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+
+- name: Install HAProxy
+  apt:
+    name: haproxy=3.0.*
+    state: present
+
+- name: Deploy HAProxy configuration file
+  template:
+    src: haproxy.cfg.j2
+    dest: /etc/haproxy/haproxy.cfg
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Check HAProxy configuration
+  command: haproxy -c -f /etc/haproxy/haproxy.cfg
+  register: haproxy_check
+  ignore_errors: yes
+
+- name: Print configuration check result
+  debug:
+    msg: "HAProxy configuration is valid."
+  when: haproxy_check.rc == 0
+
+- name: Fail if HAProxy configuration is invalid
+  ansible.builtin.fail:
+    msg: "HAProxy configuration is invalid. Please check the configuration file."
+  when: haproxy_check.rc != 0
+
+- name: Restart HAProxy service
+  systemd:
+    name: haproxy
+    state: restarted
+    enabled: yes
+
+
