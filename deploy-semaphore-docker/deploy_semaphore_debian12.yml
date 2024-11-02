@@ -1,0 +1,90 @@
+---
+- name: Deploy Semaphore using Docker on Debian 12 LXC container
+  hosts: all
+  become: true
+
+  roles:
+    - geerlingguy.docker
+
+
+
+  tasks:
+    - name: Add Docker repo using key from URL.
+      ansible.builtin.deb822_repository:
+        name: docker
+        types: deb
+        uris: "https://download.docker.com/linux/debian"
+        architectures: amd64
+        suites: bookworm
+        components: Release
+        signed_by: https://download.docker.com/linux/debian/gpg
+        state: present
+        enabled: true
+
+    - name: Create Semaphore directory
+      file:
+        path: /opt/semaphore
+        state: directory
+
+    - name: Create Semaphore Docker Compose file
+      copy:
+        dest:  /opt/semaphore/docker-compose.yml
+        content: |
+          services:
+            mysql:
+              container_name: mysql
+              restart: unless-stopped
+              image: mysql:8.0
+              networks:
+                - lan-sema
+              hostname: mysql-semaphore
+              volumes:
+                - semaphore-mysql:/var/lib/mysql
+              environment:
+                MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
+                MYSQL_DATABASE: semaphore
+                MYSQL_USER: "{{ MYSQL_USER }}"
+                MYSQL_PASSWORD: "{{ MYSQL_PASS }}"
+
+            semaphore:
+              container_name: semaphore
+              restart: unless-stopped
+              ports:
+                - "3000:3000"
+              image: semaphoreui/semaphore:latest
+              networks:
+                - lan-sema
+              environment:
+                SEMAPHORE_DB: semaphore
+                SEMAPHORE_DB_USER: "{{ MYSQL_USER }}"
+                SEMAPHORE_DB_PASS: "{{ MYSQL_PASS }}"
+                SEMAPHORE_DB_HOST: mysql-semaphore
+                SEMAPHORE_DB_PORT: 3306
+                SEMAPHORE_DB_DIALECT: mysql
+                SEMAPHORE_PLAYBOOK_PATH: /tmp/semaphore/
+                SEMAPHORE_ADMIN_PASSWORD: "{{ SEMA_ADMIN_PASS }}"
+                SEMAPHORE_ADMIN_NAME: "{{ SEMA_ADMIN_USER }}"
+                SEMAPHORE_ADMIN_EMAIL: "{{ SEMA_ADMIN_EMAIL }}"
+                SEMAPHORE_ACCESS_KEY_ENCRYPTION: "{{ SEMA_ACCESS_KEY }}"
+              depends_on:
+                - mysql
+
+          volumes:
+            semaphore-mysql:
+
+          networks:
+            lan-sema:
+
+    - name: Start Docker Compose Semaphore container
+      community.docker.docker_compose_v2:
+        project_src: /opt/semaphore/
+        state: present
+
+    - name: Print Semaphore User Password
+      debug:
+        msg: "SEMA Admin User: {{ SEMA_ADMIN_USER }}, SEMA Admin Password: {{ SEMA_ADMIN_PASS }}"
+
+
+    - name: Print access URL
+      debug:
+        msg: "Semaphore is running at http://{{ ansible_host }}:3000"

@@ -1,0 +1,13 @@
+*.retry
+*/__pycache__
+*.pyc
+.cache
+
+# Role directories and collections
+roles/
+collections/
+
+# Virtual environment directories
+.venv/
+env/
+venv/

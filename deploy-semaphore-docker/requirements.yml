@@ -1,0 +1,9 @@
+---
+roles:
+  - name: geerlingguy.docker
+    src: geerlingguy.docker
+    version: master  # or specify a version like '3.0.0'
+    
+collections:
+  - name: community.docker
+    version: latest  # You can specify a specific version if needed
